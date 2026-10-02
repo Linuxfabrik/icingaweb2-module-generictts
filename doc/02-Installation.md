@@ -1,20 +1,33 @@
-<!-- {% if index %} -->
 # Installing Icinga Web GenericTTS Integration
 
-The recommended way to install Icinga Web GenericTTS Integration
-and its dependencies is to use prebuilt packages for
-all supported platforms from our official release repository.
-Please note that [Icinga Web](https://icinga.com/docs/icinga-web) is required to run Icinga Web GenericTTS Integration
-and if it is not already set up, it is best to do this first.
+[Icinga Web](https://icinga.com/docs/icinga-web/latest/) is required to run Icinga Web GenericTTS Integration. If it is not set up yet, do this first.
 
-The following steps will guide you through installing and setting up Icinga Web GenericTTS Integration.
-<!-- {% else %} -->
-<!-- {% if not icingaDocs %} -->
+Icinga's package repositories carry the `icinga-generictts` package up to v2.1.0. Later releases are only published at [Linuxfabrik/icingaweb2-module-generictts](https://github.com/Linuxfabrik/icingaweb2-module-generictts), so install the module from there.
 
-## Installing the Package
 
-If the [repository](https://packages.icinga.com) is not configured yet, please add it first.
-Then use your distribution's package manager to install the `icinga-generictts` package
-or install [from source](02-Installation.md.d/From-Source.md).
-<!-- {% endif %} -->
-<!-- {% endif %} --><!-- {# end else if index #} -->
+## Installing from Source
+
+Download the release tarball into the Icinga Web modules directory, using `generictts` as the module name, and enable the module. Pick the version from the [tags](https://github.com/Linuxfabrik/icingaweb2-module-generictts/tags):
+
+```bash
+MODULE_NAME="generictts"
+MODULE_VERSION="v2.1.0"
+MODULE_PATH="/usr/share/icingaweb2/modules/${MODULE_NAME}"
+RELEASES="https://github.com/Linuxfabrik/icingaweb2-module-${MODULE_NAME}/archive"
+mkdir "$MODULE_PATH" \
+&& wget --quiet --output-document=- "$RELEASES/${MODULE_VERSION}.tar.gz" \
+   | tar --extract --gzip --file=- --directory="$MODULE_PATH" --strip-components=1
+icingacli module enable "${MODULE_NAME}"
+```
+
+See the Icinga Web documentation on [how to install modules](https://icinga.com/docs/icinga-web/latest/doc/08-Modules/#installation) for details.
+
+
+## Installing with Ansible
+
+The `linuxfabrik.lfops.icingaweb2_module_generictts` role from [LFOps](https://github.com/Linuxfabrik/lfops) downloads and enables the module, see its [README](https://github.com/Linuxfabrik/lfops/tree/main/roles/icingaweb2_module_generictts).
+
+
+## Next Steps
+
+Configure your ticket systems as described in [Configuration](03-Configuration.md).
