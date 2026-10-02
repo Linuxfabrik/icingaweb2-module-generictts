@@ -1,0 +1,21 @@
+version: 2
+updates:
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'friday'
+      time: '05:00'
+      timezone: 'Etc/UTC'
+    groups:
+      github-actions:
+        patterns:
+          - '*'
+
+  - package-ecosystem: 'pip'
+    directory: '/.github/pre-commit'
+    schedule:
+      interval: 'weekly'
+      day: 'friday'
+      time: '05:00'
+      timezone: 'Etc/UTC'

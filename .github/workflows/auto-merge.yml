@@ -1,0 +1,86 @@
+name: 'Linuxfabrik: Auto-merge'
+
+on:
+  pull_request: {}
+
+permissions: 'read-all'
+
+env:
+  # Lockfile directories pinned to versions that still support an old
+  # interpreter, written as `<ecosystem>:<directory>` pairs. A bump against one
+  # is never auto-merged: Dependabot does not honour `Requires-Python`, and its
+  # security updates reach such a directory even when `.github/dependabot.yml`
+  # does not watch it. The ecosystem is part of the key because several
+  # ecosystems share a directory, so freezing `pip:/` must not also stop the
+  # `github-actions` group that sits at `/`. Empty in repositories without such
+  # a lockfile.
+  FROZEN_LOCKFILES: '[]'
+
+jobs:
+  dependabot:
+    runs-on: 'ubuntu-latest'
+    if: 'github.actor == ''dependabot[bot]'''
+    permissions:
+      contents: 'write'
+      pull-requests: 'write'
+    steps:
+
+      - uses: 'dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98' # v3.1.0
+        id: 'meta'
+
+      # A bump against a frozen lockfile is left open for a human. Dependabot
+      # does not honour `Requires-Python`, so it may propose a version that
+      # drops the interpreter the lockfile exists for (py39 -> RHEL 8, RHEL 9,
+      # Debian 11; py310 -> Ubuntu 22.04). It may equally propose a security
+      # fix that still supports it. Only a human can tell the two apart, so
+      # the pull request is neither merged nor closed. Regenerate the lockfile
+      # with `pip-compile` on a matching Python host once the bump is accepted.
+      - if: >-
+          contains(fromJSON(env.FROZEN_LOCKFILES), format('{0}:{1}',
+          steps.meta.outputs.package-ecosystem, steps.meta.outputs.directory))
+          && github.event.action == 'opened'
+        run: |
+          gh pr comment "$PR_URL" --body "Not auto-merged: \`${DIRECTORY}\` is frozen because Dependabot does not honour \`Requires-Python\`. Check whether \`${DEPENDENCY}\` still supports that lockfile's interpreter. If it does, regenerate the lockfile with \`pip-compile\` on a matching Python host. Either way, close this PR afterwards."
+        env:
+          DEPENDENCY: '${{ steps.meta.outputs.dependency-names }}'
+          DIRECTORY: '${{ steps.meta.outputs.directory }}'
+          GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+          PR_URL: '${{ github.event.pull_request.html_url }}'
+
+      # `gh pr merge --auto` is refused while the pull request sits in clean or
+      # unstable state, which is exactly where a freshly opened Dependabot pull
+      # request lands once the required checks pass while the optional ones are
+      # still running. The direct merge is a safe fallback: branch protection
+      # keeps enforcing the required checks server-side, so a pull request that
+      # is not ready is still rejected.
+      - if: >-
+          !contains(fromJSON(env.FROZEN_LOCKFILES), format('{0}:{1}',
+          steps.meta.outputs.package-ecosystem, steps.meta.outputs.directory))
+          && (steps.meta.outputs.update-type == 'version-update:semver-patch'
+              || steps.meta.outputs.update-type == 'version-update:semver-minor')
+        run: |
+          gh pr merge --auto --squash "$PR_URL" || gh pr merge --squash "$PR_URL"
+        env:
+          GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+          PR_URL: '${{ github.event.pull_request.html_url }}'
+
+  # The weekly hook bump carries nothing but `rev:` changes in
+  # .pre-commit-config.yaml, and it arrives in every repository at once.
+  # Merging that by hand is pure overhead, so it goes in as soon as the
+  # required checks pass. The same fallback as above applies, and it is only
+  # safe because the ruleset keeps enforcing those checks server-side.
+  pre-commit-autoupdate:
+    runs-on: 'ubuntu-latest'
+    if: >-
+      github.actor == 'linuxfabrik-automation[bot]'
+      && github.head_ref == 'chore/pre-commit-autoupdate'
+    permissions:
+      contents: 'write'
+      pull-requests: 'write'
+    steps:
+
+      - run: |
+          gh pr merge --auto --squash "$PR_URL" || gh pr merge --squash "$PR_URL"
+        env:
+          GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+          PR_URL: '${{ github.event.pull_request.html_url }}'

@@ -1,6 +1,12 @@
 # Exclude all hidden files
 .*
 
-# Except those related to Git and .mailmap
+# Except those related to Git, pre-commit and .mailmap
 !.git*
 !.mailmap
+!.pre-commit-config.yaml
+
+# Tools and Icinga Web 2 sources the PHP tests install
+/composer.json
+/composer.lock
+/vendor/

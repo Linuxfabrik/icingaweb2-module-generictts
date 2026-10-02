@@ -1,0 +1,152 @@
+# Contributing
+
+
+## Linuxfabrik Standards
+
+The following standards apply to all Linuxfabrik repositories.
+
+
+### Code of Conduct
+
+Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md).
+
+
+### Issue Tracking
+
+Open issues are tracked on GitHub Issues in the respective repository. In addition to the GitHub default labels (`bug`, `documentation`, `duplicate`, `enhancement`, `good first issue`, `help wanted`, `invalid`, `question`, `wontfix`), the following project-specific labels are used:
+
+| Label | Use for |
+|---|---|
+| `build` | Packaging, build scripts, distribution artifacts. |
+| `ci/cd` | Continuous integration, GitHub Actions workflows, release automation, test automation. |
+| `dependencies` | Pull requests opened by Dependabot. |
+| `github_actions` | Pull requests that update GitHub Actions workflow definitions or pinned action SHAs. |
+| `python` | Pull requests that update Python dependencies. |
+
+When opening a new issue, attach the label that matches the area of work. The `build` and `ci/cd` labels mirror the conventional commit scopes used in the same areas (`fix(build): ...`, `chore(ci/cd): ...`).
+
+
+### Pre-commit
+
+Some repositories use [pre-commit](https://pre-commit.com/) for automated linting and formatting checks. If the repository contains a `.pre-commit-config.yaml`, install [pre-commit](https://pre-commit.com/#install) and configure the hooks after cloning:
+
+```bash
+pre-commit install
+```
+
+
+### Commit Messages
+
+Commit messages follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification:
+
+```
+<type>(<scope>): <subject>
+```
+
+If there is a related issue, append `(fix #N)`:
+
+```
+<type>(<scope>): <subject> (fix #N)
+```
+
+`<type>` must be one of:
+
+- `chore`: Changes to the build process or auxiliary tools and libraries
+- `docs`: Documentation only changes
+- `feat`: A new feature
+- `fix`: A bug fix
+- `perf`: A code change that improves performance
+- `refactor`: A code change that neither fixes a bug nor adds a feature
+- `style`: Changes that do not affect the meaning of the code (whitespace, formatting, etc.)
+- `test`: Adding missing tests
+
+
+### Changelog
+
+Document all changes in `CHANGELOG.md` following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Sort entries within sections alphabetically.
+
+The audience is a Linux system engineer with 30 seconds to decide whether an update is worth it. Write for that reader:
+
+* **Lead with highlights.** Begin every release section with three to five sentences of running text, directly below the version heading and above the first `###` section. Cover what drives the update decision, including any manual step it requires. No bullet list, no issue links, no repetition of the individual entries. A release with only a handful of entries does not need one, since the entries themselves already fit on a screen.
+* **State the change before its scope.** Up to five affected components keep the `component: what changed` form. From six on, put the statement first and close it with either a collective name (`all *-version checks`) or the components in parentheses, so the entry is understood from its first line. These broad entries come first in their subsection, ahead of the alphabetically sorted per-component entries.
+* **One sentence per entry.** `Added`, `Changed` and `Fixed` say what an administrator notices. Root cause, reproduction steps and internal reasoning belong in the commit body and the issue.
+* **Migration instructions only under `Breaking Changes`.** Wording such as "rename x to y" or "set z to restore the previous behaviour" anywhere else means the entry sits in the wrong section. Entries under `Breaking Changes` may run longer than one sentence.
+* **Leave out contributor-only changes.** Lockfile and pin bumps, Dependabot and pre-commit configuration, GitHub Actions bumps and test infrastructure are covered by the git history and the pull request. Keep an entry only where an administrator sees the effect, for example when it changes the released artifact.
+
+A release section starts like this:
+
+```markdown
+## [v6.1.0] - 2026-09-15
+
+**Highlights:** Two long-standing sources of false alarms are gone, and container workloads are now covered. Cumulative counters are reported as rates instead of totals, so any dashboard built on them has to be re-imported.
+
+### Added
+```
+
+The scope rule, on an entry affecting 43 components. Instead of:
+
+```markdown
+* about-me, borgbackup, deb-lastactivity, file-ownership, fs-xfs-stats, getent, ...: `--always-ok` to force an OK result
+```
+
+write:
+
+```markdown
+* `--always-ok` forces an OK result on 43 further components (about-me, borgbackup, deb-lastactivity, ...)
+```
+
+
+### Language
+
+Code, comments, commit messages, and documentation must be written in English.
+
+
+### CI Supply Chain
+
+GitHub Actions in `.github/workflows/` are pinned by commit SHA, not by tag. Dependabot's `github-actions` ecosystem keeps these pins up to date.
+
+Python packages installed via `pip` inside workflows follow a two-tier policy:
+
+- `pre-commit` is installed from a hash-pinned requirements file at `.github/pre-commit/requirements.txt`, generated with `pip-compile --generate-hashes --strip-extras` from `.github/pre-commit/requirements.in`. Dependabot's `pip` ecosystem watches that directory and maintains both files.
+- Every other tool a workflow installs with `pip` (`ansible-builder`, `build`, `mkdocs`, `pdoc`, `ruff`, `tox`, ...) follows the same model: a version pin in `.github/<name>/requirements.in`, a hash-pinned `requirements.txt` generated from it the same way, `pip install --require-hashes --requirement .github/<name>/requirements.txt` in the workflow, and a Dependabot `pip` entry for that directory. Dependabot does not read `run:` lines, so a version pinned there (`package==X.Y.Z`) is never updated, and a Scorecard `pipCommand not pinned by hash` finding on it is a real one.
+
+
+### Coding Conventions
+
+- Sort variables, parameters, lists, and similar items alphabetically where possible.
+- Always use long parameters when using shell commands.
+- Use RFC [5737](https://datatracker.ietf.org/doc/html/rfc5737), [3849](https://datatracker.ietf.org/doc/html/rfc3849), [7042](https://datatracker.ietf.org/doc/html/rfc7042#section-2.1.1), and [2606](https://datatracker.ietf.org/doc/html/rfc2606) in examples and documentation:
+    - IPv4: `192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24`
+    - IPv6: `2001:DB8::/32`
+    - MAC: `00-00-5E-00-53-00` through `00-00-5E-00-53-FF` (unicast), `01-00-5E-90-10-00` through `01-00-5E-90-10-FF` (multicast)
+    - Domains: `*.example`, `example.com`
+
+
+---
+
+
+## Module Development
+
+The repository is an Icinga Web 2 module named `generictts`:
+
+- `application/`: controllers, forms and view scripts of the configuration tab.
+- `configuration.php`: registers the "TTS Integrations" configuration tab.
+- `doc/`: the user documentation.
+- `library/Generictts/Ticket.php`: the `ticket` hook that turns matching patterns into links.
+- `module.info`: module name, version and description.
+- `run.php`: registers the `ticket` hook.
+
+The `Linuxfabrik: PHP Tests` workflow runs three checks on every supported PHP version, against the development state of Icinga Web 2 and Icinga DB Web:
+
+- `phplint` for syntax errors.
+- `phpcs` with the PSR-12 rules from `phpcs.xml`.
+- PHPStan on the maximum level from `phpstan.neon`. Findings that predate the Linuxfabrik maintenance are recorded in `phpstan-baseline.neon`. Fix new findings instead of adding them there.
+
+To run the same checks locally, use the commands from `.github/workflows/lf-php-tests.yml` in a throwaway container with PHP 8.2 or later and Composer. They install their tools into `vendor/` and write `composer.json` and `composer.lock`, all of which are ignored by Git.
+
+
+## Releasing
+
+1. Set the new version in `module.info` (`Version: X.Y.Z`) and in the installation example in `README.md` (`MODULE_VERSION="vX.Y.Z"`).
+2. Turn `## [Unreleased]` in `CHANGELOG.md` into `## [vX.Y.Z] - YYYY-MM-DD` and update the link footer.
+3. Tag the commit as `vX.Y.Z` and publish a GitHub release from that tag.

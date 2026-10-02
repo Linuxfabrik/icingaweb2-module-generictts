@@ -1,0 +1,67 @@
+name: 'Linuxfabrik: PHP Tests'
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request: {}
+
+permissions:
+  contents: 'read'
+
+jobs:
+  lint:
+    name: 'Static analysis for PHP ${{ matrix.php }}'
+    runs-on: 'ubuntu-latest'
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # Icinga Web 2 requires PHP 8.2 or later since v2.13, and the analysis
+        # runs against its main branch. Same versions as Icinga's own module CI.
+        php:
+          - '8.2'
+          - '8.3'
+          - '8.4'
+          - '8.5'
+
+    steps:
+      - name: 'Harden the runner (Audit all outbound calls)'
+        uses: 'step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1' # v2.21.1
+        with:
+          egress-policy: 'audit'
+
+      - name: 'Checkout repository'
+        uses: 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' # v7.0.1
+
+      - name: 'Set up PHP'
+        uses: 'shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240' # 2.37.2
+        with:
+          coverage: 'none'
+          php-version: '${{ matrix.php }}'
+
+      # The module has no composer.json of its own, so the tools are pinned to
+      # their major version here. PHPStan 2 matches the format of
+      # phpstan-baseline.neon.
+      - name: 'Install the tools and the Icinga Web 2 sources to analyse against'
+        run: |
+          composer require --no-interaction --no-progress \
+            'ipl/i18n:@dev' \
+            'overtrue/phplint:^9' \
+            'phpstan/phpstan:^2' \
+            'squizlabs/php_codesniffer:^4'
+          git clone --depth 1 https://github.com/Icinga/icingaweb2.git vendor/icingaweb2
+          git clone --depth 1 https://github.com/Icinga/icingadb-web.git vendor/icingadb-web
+          git clone --depth 1 --branch snapshot/nightly https://github.com/Icinga/icinga-php-thirdparty.git vendor/icinga-php-thirdparty
+
+      - name: 'PHP Lint'
+        if: '${{ ! cancelled() }}'
+        run: './vendor/bin/phplint --no-interaction --exclude="{^vendor/.*}" -- .'
+
+      - name: 'PHP CodeSniffer'
+        if: '${{ ! cancelled() }}'
+        run: './vendor/bin/phpcs'
+
+      - name: 'PHPStan'
+        if: '${{ ! cancelled() }}'
+        run: './vendor/bin/phpstan analyse --no-progress --memory-limit=1G'
