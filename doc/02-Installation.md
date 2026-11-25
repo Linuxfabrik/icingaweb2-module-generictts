@@ -28,6 +28,11 @@ See the Icinga Web documentation on [how to install modules](https://icinga.com/
 The `linuxfabrik.lfops.icingaweb2_module_generictts` role from [LFOps](https://github.com/Linuxfabrik/lfops) downloads and enables the module, see its [README](https://github.com/Linuxfabrik/lfops/tree/main/roles/icingaweb2_module_generictts).
 
 
+## Upgrading
+
+Empty the module directory and extract the new release as described above. The configuration in `/etc/icingaweb2/modules/generictts/` is kept.
+
+
 ## Next Steps
 
 Configure your ticket systems as described in [Configuration](03-Configuration.md).
